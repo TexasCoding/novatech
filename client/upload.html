@@ -1,0 +1,32 @@
+<template name="upload">
+
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6 col-md-offset-3">
+                <div class="panel panel-default">
+                    <div class="panel-heading">Manage CSV's</div>
+                    <div class="panel-body">
+                        <button id="export" class="btn btn-success">Export Bonanza</button>
+                        <button id="exportEbid" class="btn btn-warning pull-right">Export Ebid</button>
+                        <br>
+                        <br>
+                        <form class="form-inline">
+                            <input type="text" class="form-control" name="brand" placeholder="Enter brand">
+                            <input type="submit" class="btn btn-primary" value="Get CSV By Brand">
+                        </form>
+                        <br>
+                        <br> 
+                        {{#unless uploading}}
+                        <input type="file" class="form-control" name="uploadCSV"> 
+                        {{else}}
+                        <p>
+                            <i class="fa fa-spin fa-refresh"></i> Uploading files...</p>
+                        {{/unless}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</template>
