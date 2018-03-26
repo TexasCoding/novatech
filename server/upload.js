@@ -24,6 +24,15 @@ function _calcPrice(price, shipping, mark, fee) {
     return salePrice;
 }
 
+function description(product) {
+    return "<h2>" + product.name + "</h2>" +
+        product.description +
+        "<br><br><b>Package Includes:</b> " + product.package_includes +
+        "<br><br><b>Condition Description:</b> " + product.condition_description +
+        "<br><br><b>Warranty Information:</b> " + product.warranty +
+        "<br><br><b>Return Policy:</b> " + product.return_policy;
+}
+
 Meteor.methods({
 
     exportProducts() {
@@ -52,7 +61,7 @@ Meteor.methods({
             data.push([
                 c.sku,
                 c.name,
-                c.description,
+                description(c),
                 _calcPrice(c.cost_pro_member, c.shipping_cost, 6.45, 3.5),
                 images,
                 c.category,
@@ -167,12 +176,12 @@ Meteor.methods({
 
         _.each(products, (c) => {
             let images = c.image_url + '##' + c.additional_images
-            
-            function category(cat){
+
+            function category(cat) {
                 let category = cat;
-                
-                switch(category) {
-                    case '9355': 
+
+                switch (category) {
+                    case '9355':
                         return '1282'
                         break;
                     case '111418':
@@ -187,32 +196,51 @@ Meteor.methods({
                     case '171485':
                         return '16648'
                         break;
+                    case '35686':
+                        return '27416'
+                        break;
+                    case '952':
+                        return '27416'
+                        break;
+                    case '87133':
+                        return '27416'
+                        break;
+                    case '155189':
+                        return '27416'
+                        break;
+                    case '38047':
+                        return '27416'
+                        break;
+                    case '20725':
+                        return '27416'
+                        break;
                     default:
-                        return '995'
+                        return category
                 }
             }
 
             function condition(condition) {
-                if(condition === "New") {
+                if (condition === "New") {
                     return "new"
                 } else {
                     return "used"
                 }
             }
 
-            function description(product) {
-                return product.description + 
-                        "<br><br><b>Package Includes:</b> " + product.package_includes +
-                        "<br><br><b>Condition Description:</b> " + product.condition_description +
-                        "<br><br><b>Warranty Information:</b> " + product.warranty +
-                        "<br><br><b>Return Policy:</b> " + product.return_policy;
+            
+            function title(product) {
+                let mpnLength = product.model_number.length;
+
+                let title = product.name.substring(0, 80 - (mpnLength + 1));
+
+                return title + " " + product.model_number;
             }
             data.push([
                 "aegisaccessories",
                 category(c.category),
                 "",
                 c.upc_code ? c.upc_code : '',
-                c.name.substring(0, 80),
+                title(c),
                 images.replace(/,/gi, "##"),
                 condition(c.condition),
                 c.qty,
