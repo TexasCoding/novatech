@@ -33,14 +33,15 @@ Meteor.methods({
     const products = Products.find({ category: { $gt: 0 }, qty: { $gte: 3 } }).fetch();
 
     _.each(products, (c) => {
-      const images = `${c.image_url}, ${c.additional_images}`;
+      const addAdditional = `,${c.additional_images}`;
+      const allImages = c.image_url + c.additional_images !== '' ? addAdditional : '';
 
       data.push([
         c.sku,
         c.title,
         c.full_description,
         c.sale_price_bonanza,
-        images,
+        allImages,
         c.category,
         0,
         'free',
