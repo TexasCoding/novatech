@@ -7,21 +7,65 @@
                     <div class="panel-heading">Manage CSV's</div>
                     <div class="panel-body">
                         <button id="export" class="btn btn-success">Export Bonanza</button>
+                        <!--<button id="exportUpdated" class="btn btn-info pull-right">Export Updated</button>-->
+
                         <button id="exportEbid" class="btn btn-warning pull-right">Export Ebid</button>
-                        <br>
-                        <br>
-                        <form class="form-inline">
-                            <input type="text" class="form-control" name="brand" placeholder="Enter brand">
-                            <input type="submit" class="btn btn-primary" value="Get CSV By Brand">
-                        </form>
-                        <br>
-                        <br> 
-                        {{#unless uploading}}
-                        <input type="file" class="form-control" name="uploadCSV"> 
-                        {{else}}
+
+                        <hr class="clearfix">
                         <p>
-                            <i class="fa fa-spin fa-refresh"></i> Uploading files...</p>
+                            <button class="btn btn-success disabled" type="button">
+                                Uploaded <span class="badge">{{uploadCount}}</span>
+                            </button>
+
+                            <button class="btn btn-warning pull-right disabled" type="button">
+                                Errors <span class="badge">{{errorCount}}</span>
+                            </button>
+
+                        </p>
+
+
+
+                        {{#unless progressFinished progressPercentage}}
+                            <p><i class="fa fa-spin fa-refresh"></i> Uploading {{productCount}} items...</p>
+                            <div class="progress">
+                                <div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0"
+                                     aria-valuemax="100" style="width: {{progressPercentage}}%;">
+                                    <span class="sr-only">60% Complete</span>
+                                </div>
+                            </div>
+                        {{else}}
+
+                            <div class="form-group">
+                                <label>Upload Inventory</label>
+                                <input type="file" class="form-control" name="uploadInventoryCSV">
+
+                            </div>
+
+                            <!--<div class="form-group">-->
+                                <!--<label>Upload Out Of Date</label>-->
+                                <!--<input type="file" class="form-control" name="uploadOutOfDateCSV">-->
+                            <!--</div>-->
+
+                            <div class="form-group">
+                                <label>Upload Ebid Categories</label>
+                                <input type="file" class="form-control" name="uploadEbidCategoriesCSV">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Upload Bonanza Categories</label>
+                                <input type="file" class="form-control" name="uploadBonanzaCategoriesCSV">
+                            </div>
+
+
+                            <!--<button id="removeAll" class="btn btn-danger btn-block disabled" disabled>Remove All-->
+                                <!--(DANGER)-->
+                            <!--</button>-->
+
+                            <!--<button id="removeProducts" class="btn btn-danger btn-block disabled" disabled>Remove Products (Warning)-->
+                            <!--</button>-->
                         {{/unless}}
+
+
                     </div>
                 </div>
             </div>

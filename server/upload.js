@@ -1,313 +1,229 @@
-import { Products } from '../imports/api/products';
+import { Meteor } from 'meteor/meteor';
+import { check } from 'meteor/check';
 
-function precisionRound(number, precision) {
-    var factor = Math.pow(10, precision);
-    return Math.round(number * factor) / factor;
-}
+import Products from '../imports/api/products';
+import Categories from '../imports/api/categories';
+import EbidCategories from '../imports/api/ebidCategories';
 
-function _calcPrice(price, shipping, mark, fee) {
-    let ship = precisionRound(shipping, 2);
-    let priceSet = precisionRound(price, 2);
-    let base = precisionRound(priceSet + ship, 2);
-    let paypalPercent = precisionRound(2.9 / 100, 2);
-    let paypalFee = precisionRound(.30, 2);
-    let bonanzaFee = precisionRound(fee / 100, 2);
-    let markup = precisionRound(mark / 100, 3);
-    let costFee = precisionRound(paypalPercent * base + paypalFee, 2);
-    let cost = precisionRound(costFee + base, 2);
-    let markupPrice = precisionRound(cost * markup, 2);
-    let basePrice = precisionRound(markupPrice + cost, 2);
-    let basePricePayPal = precisionRound(basePrice * paypalPercent + paypalFee, 2);
-    let basePriceBonaza = precisionRound(basePrice * bonanzaFee, 2);
-    salePrice = precisionRound(basePrice + basePricePayPal + basePriceBonaza, 2);
-    console.log(salePrice);
-    return salePrice;
-}
-
-function description(product) {
-    return "<h2>" + product.name + "</h2>" +
-        product.description +
-        "<br><br><b>Package Includes:</b> " + product.package_includes +
-        "<br><br><b>Condition Description:</b> " + product.condition_description +
-        "<br><br><b>Warranty Information:</b> " + product.warranty +
-        "<br><br><b>Return Policy:</b> " + product.return_policy;
+function ebidCondition (condition) {
+  if (condition === 'New') {
+    return 'new';
+  }
+  return 'used';
 }
 
 Meteor.methods({
+  exportProducts () {
+    const fields = [
+      'id',
+      'title',
+      'description',
+      'price',
+      'images',
+      'category',
+      'shipping_price',
+      'shipping_type',
+      'sku',
+      'qty',
+      'trait',
+      'force_update',
+    ];
 
-    exportProducts() {
-        let fields = [
-            "id",
-            "title",
-            "description",
-            "price",
-            "images",
-            "category",
-            "shipping_price",
-            "shipping_type",
-            "sku",
-            "qty",
-            "trait",
-            "force_update"
-        ];
+    const data = [];
+    const products = Products.find({ category: { $gt: 0 }, qty: { $gte: 3 } }).fetch();
 
-        let data = [];
-        let products = Products.find({ category: { $exists: true } }).fetch();
+    _.each(products, (c) => {
+      const images = `${c.image_url}, ${c.additional_images}`;
 
-        _.each(products, (c) => {
+      data.push([
+        c.sku,
+        c.title,
+        c.full_description,
+        c.sale_price_bonanza,
+        images,
+        c.category,
+        0,
+        'free',
+        c.sku,
+        c.qty,
+        c.trait,
+        'true',
+      ]);
+    });
 
-            let images = c.image_url + ', ' + c.additional_images
+    return { fields, data };
+  },
+  exportProductsEbid () {
+    const fields = [
+      'Username',
+      'Category id',
+      'eBid Store Category',
+      'Barcode',
+      'Auction Title',
+      'Image URL',
+      'Item Condition',
+      'Quantity',
+      'Start',
+      'End',
+      'Starting Bid',
+      'Sales Tax',
+      'Reserve',
+      'Feature',
+      'YouTube Video ID',
+      'BuyNow Price',
+      'Brand',
+      'Domestic Shipping',
+      'International Shipping',
+      'Payment Methods',
+      'Auto Repost',
+      'SKU',
+      'Dispatch Time',
+      'Return Policy',
+      'Description',
+      'Action',
+      'End',
+    ];
 
-            data.push([
-                c.sku,
-                c.name,
-                description(c),
-                _calcPrice(c.cost_pro_member, c.shipping_cost, 6.45, 3.5),
-                images,
-                c.category,
-                0,
-                "free",
-                c.sku,
-                c.qty,
-                c.trait,
-                "true"
-            ]);
-        });
+    const data = [];
+    const products = Products.find({ ebid_category: { $gt: 0 }, qty: { $gte: 3 } }).fetch();
 
-        return { fields: fields, data: data };
-    },
+    _.each(products, (c) => {
+      if (c.ebid_category !== '0') {
+        const images = `${c.image_url}##${c.additional_images}`;
+        data.push([
+          'aegisaccessories',
+          c.ebid_category,
+          '',
+          c.upc_code !== 'na' ? c.upc_code : '',
+          c.title,
+          images.replace(/,/gi, '##'),
+          ebidCondition(c.condition),
+          c.qty,
+          'Immediate',
+          'run until sold',
+          '1.00',
+          '',
+          '',
+          'Gallery',
+          '',
+          c.sale_price_ebid,
+          c.manufacturer,
+          '03=0.00',
+          '01',
+          '5',
+          '0',
+          c.sku,
+          '2',
+          '2',
+          c.full_description,
+          'ao',
+          '##end##',
+        ]);
+      }
+    });
+    return { fields, data };
+  },
+  removeProducts () {
+    return Products.remove({});
+  },
+  parseUpload (data) {
+    check(data, Array);
+    for (let i = 0; i < data.length; i += 1) {
+      if (data[i].entity_id) {
+        const itemNew = {
+          entity_id: data[i].entity_id,
+          sku: data[i].sku,
+          cost_free_member: data[i].cost_free_member,
+          cost_pro_member: data[i].cost_pro_member,
+          manufacturer: data[i].manufacturer,
+          map_price: data[i].map_price,
+          model_number: data[i].model_number,
+          mpn: data[i].mpn,
+          name: data[i].name,
+          height: data[i].height,
+          length: data[i].length,
+          width: data[i].width,
+          shipping_cost: data[i].shipping_cost,
+          ship_from_location: data[i].ship_from_location,
+          upc_code: data[i].upc_code.match(/^[0-9]+$/) ? data[i].upc_code : 'na',
+          warranty: data[i].warranty,
+          weight: data[i].weight,
+          qty: data[i].qty,
+          return_policy: data[i].return_policy,
+          image_url: data[i].image_url,
+          additional_images: data[i].additional_images,
+          condition_description: data[i].condition_description,
+          description: data[i].description,
+          package_includes: data[i].package_includes,
+          category_path: data[i].category_path,
+          condition: data[i].condition,
+        };
 
-
-    exportProductsEbid() {
-        let fields = [
-            "Username",
-            "Category id",
-            "Barcode",
-            "Auction Title",
-            "Image URL",
-            "Item Condition",
-            "Quantity",
-            "Start",
-            "End",
-            "Starting Bid",
-            "Feature",
-            "BuyNow Price",
-            "Brand",
-            "Domestic Shipping",
-            "International Shipping",
-            "Payment Methods",
-            "Auto Repost",
-            "SKU",
-            "Dispatch Time",
-            "Return Policy",
-            "Description",
-            "Action",
-            "End"
-        ];
-
-        let data = [];
-        let products = Products.find({ category: { $exists: true } }).fetch();
-
-        _.each(products, (c) => {
-            let images = c.image_url + '##' + c.additional_images
-            data.push([
-                "aegisaccessories",
-                c.category,
-                c.upc ? c.upc : '',
-                c.name,
-                images,
-                c.condition,
-                c.qty,
-                "Immediate",
-                "run until sold",
-                "",
-                "gallery",
-                _calcPrice(c.cost_pro_member, c.shipping_cost, 6.45, 2.0),
-                c.manufacturer,
-                "03=0.00",
-                "01",
-                5,
-                0,
-                c.sku,
-                2,
-                2,
-                c.description,
-                "ao",
-                "##end##"
-            ]);
-        });
-
-        return { fields: fields, data: data };
-    },
-
-    exportProductsEbidBrand(brand) {
-        let fields = [
-            "Username",
-            "Category id",
-            "eBid Store Category",
-            "Barcode",
-            "Auction Title",
-            "Image URL",
-            "Item Condition",
-            "Quantity",
-            "Start",
-            "End",
-            "Starting Bid",
-            "Sales Tax",
-            "Reserve",
-            "Feature",
-            "YouTube Video ID",
-            "BuyNow Price",
-            "Brand",
-            "Domestic Shipping",
-            "International Shipping",
-            "Payment Methods",
-            "Auto Repost",
-            "SKU",
-            "Dispatch Time",
-            "Return Policy",
-            "Description",
-            "Action",
-            "End"
-        ];
-
-        let data = [];
-        let products = Products.find({ category: { $exists: true }, manufacturer: brand }).fetch();
-
-        _.each(products, (c) => {
-            let images = c.image_url + '##' + c.additional_images
-
-            function category(cat) {
-                let category = cat;
-
-                switch (category) {
-                    case '9355':
-                        return '1282'
-                        break;
-                    case '111418':
-                        return '19468'
-                        break;
-                    case '111422':
-                        return '9590'
-                        break;
-                    case '171485':
-                        return '16648'
-                        break;
-                    case '171485':
-                        return '16648'
-                        break;
-                    case '35686':
-                        return '27416'
-                        break;
-                    case '952':
-                        return '27416'
-                        break;
-                    case '87133':
-                        return '27416'
-                        break;
-                    case '155189':
-                        return '27416'
-                        break;
-                    case '38047':
-                        return '27416'
-                        break;
-                    case '20725':
-                        return '27416'
-                        break;
-                    default:
-                        return category
-                }
-            }
-
-            function condition(condition) {
-                if (condition === "New") {
-                    return "new"
-                } else {
-                    return "used"
-                }
-            }
-
-            
-            function title(product) {
-                let mpnLength = product.model_number.length;
-
-                let title = product.name.substring(0, 80 - (mpnLength + 1));
-
-                return title + " " + product.model_number;
-            }
-            data.push([
-                "aegisaccessories",
-                category(c.category),
-                "",
-                c.upc_code ? c.upc_code : '',
-                title(c),
-                images.replace(/,/gi, "##"),
-                condition(c.condition),
-                c.qty,
-                "Immediate",
-                "run until sold",
-                "1.00",
-                "",
-                "",
-                "Gallery",
-                "",
-                _calcPrice(c.cost_pro_member, c.shipping_cost, 6.45, 2.0),
-                c.manufacturer,
-                "03=0.00",
-                "01",
-                '5',
-                '0',
-                c.sku,
-                '2',
-                '2',
-                description(c),
-                "ao",
-                "##end##"
-            ]);
-        });
-
-        return { fields: fields, data: data };
-    },
-
-    removeAll() {
-        Products.remove({});
-    },
-
-    parseUpload(data) {
-        check(data, Array);
-        for (let i = 0; i < data.length; i++) {
-            let item = data[i];
-
-            Products.insert(item);
-            console.log('SKU: ' + item.sku + ' has been added to database.');
-        }
-    },
-
-    parseBonanza(data) {
-        check(data, Array);
-
-        for (let i = 0; i < data.length; i++) {
-            let item = data[i],
-                exists = Products.findOne({ sku: item.sku });
-
-            if (!exists) {
-                console.warn('Rejected. This item does not exist.');
-            } else {
-                if (item.category !== null && item.traits !== null) {
-                    console.log(item.category);
-                    Products.update(exists._id, {
-                        $set: {
-                            'category': item.category,
-                            'trait': item.trait
-                        }
-                    });
-                    console.log('SKU: ' + item.sku + ' has been updated in database.');
-                } else {
-                    console.log('Item values not present.');
-
-                }
-
-            }
-        }
+        return Products.insert(itemNew);
+      }
     }
+    return true;
+  },
+  parseBonanzaCategory (data) {
+    check(data, Array);
+    const cat = [];
+    for (let i = 0; i < data.length; i += 1) {
+      if (data[i]['Category ID']) {
+        const category = {
+          parent_category: data[i]['Parent Category'],
+          category_id: data[i]['Category ID'],
+          category_name: data[i]['Category Name'],
+          full_name: data[i]['Full Name'],
+        };
+
+        cat[i] = Categories.insert(category);
+      }
+    }
+    return cat;
+  },
+  parseEbidCategoy (data) {
+    check(data, Array);
+    const cat = [];
+    for (let i = 0; i < data.length; i += 1) {
+      if (data[i][0]) {
+        const category = {
+          category_id: data[i][0],
+          parent_category: data[i][1],
+          full_name: data[i][2],
+        };
+        cat[i] = EbidCategories.insert(category);
+      }
+    }
+    return cat;
+  },
 });
+
+// removeAll () {
+//   Products.remove({});
+//   Categories.remove({});
+//   EbidCategories.remove({});
+//   return 'Database has been cleared!';
+// },
+// parseOutOfDateUpload (data) {
+//   check(data, Array);
+//
+//   for (let i = 0; i < data.length; i += 1) {
+//     if (data[i].sku) {
+//       const itemUpdate = {
+//         qty: data[i].qty,
+//       };
+//       const product = Products.findOne({ sku: data[i].sku });
+//
+//       if (product) {
+//         if (product.qty !== itemUpdate.qty) {
+//           Products.update(product._id, {
+//             $set: itemUpdate,
+//           });
+//           return true;
+//         }
+//         return false;
+//       }
+//     }
+//   }
+//   return true;
+// },
